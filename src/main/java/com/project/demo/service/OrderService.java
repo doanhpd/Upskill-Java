@@ -7,6 +7,8 @@ import com.project.demo.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import com.project.demo.kafka.AfterCommitKafkaProducer;
+
 import java.time.LocalDateTime;
 
 @Service
@@ -15,10 +17,15 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
 
+    private final AfterCommitKafkaProducer kafkaProducer;
+
+
     public OrderService(ProductRepository productRepository,
-                        OrderRepository orderRepository) {
+                        OrderRepository orderRepository,
+                        AfterCommitKafkaProducer kafkaProducer) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
+        this.kafkaProducer = kafkaProducer;
     }
 
     @Transactional
@@ -42,7 +49,11 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
 
         orderRepository.save(order);
+
+        // Gửi message Kafka sau khi commit thành công
+        kafkaProducer.sendAfterCommit("order-topic", String.valueOf(order.getId()), "Order created: " + order.getId());
     }
+
 }
 
 
